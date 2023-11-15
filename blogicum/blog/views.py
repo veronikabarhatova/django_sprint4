@@ -2,12 +2,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
+from django.db.models import Q
 
 from django.db.models import Count
 
 from django.shortcuts import get_object_or_404, redirect, render
 
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 
 from django.utils import timezone
 
@@ -63,6 +64,7 @@ def category_posts(request, category_slug):
 class PostDetailView(LoginRequiredMixin, DetailView):
     model = Post
     template_name = 'blog/detail.html'
+    pk_url_kwarg = 'post_id'
 
     def get_context_data(self, **kwargs):
         return dict(
@@ -71,18 +73,15 @@ class PostDetailView(LoginRequiredMixin, DetailView):
             comments=self.object.comments.select_related('author')
         )
 
-    def get_object(self):
+    def get_object(self, queryset=None):
         posts = Post.objects
-        return get_object_or_404(
-            posts.filter(
-                is_published=True
-            ) or posts.filter(
-                author=self.request.user
-            )
-            if self.request.user and self.request.user.is_authenticated
-            else get_post(Post.objects),
-            pk=self.kwargs['post_id'],
-        )
+        if self.request.user and self.request.user.is_authenticated:
+            return get_object_or_404(posts.filter(Q(is_published=True)
+                                                  | Q(author=self.request.user)),
+                                     pk=self.kwargs[self.pk_url_kwarg])
+        else:
+            return get_object_or_404(get_post(posts),
+                                     pk=self.kwargs['post_id'])
 
 
 class ProfileListView(ListView):
@@ -115,7 +114,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse('blog:profile', args=[self.request.user])
+        return reverse_lazy('blog:profile', args=[self.request.user])
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -128,7 +127,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:profile', args=[self.request.user])
+        return reverse_lazy('blog:profile', args=[self.request.user])
 
 
 class PostMixin(LoginRequiredMixin):
@@ -137,8 +136,12 @@ class PostMixin(LoginRequiredMixin):
     form_class = PostForm
     pk_url_kwarg = 'post_id'
 
+    def get_object(self, queryset=None):
+        return get_object_or_404(Post.objects.all(),
+                                 pk=self.kwargs[self.pk_url_kwarg])
+
     def dispatch(self, request, *args, **kwargs):
-        post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        post = get_object_or_404(Post, pk=self.kwargs[self.pk_url_kwarg])
         if post.author != self.request.user:
             return redirect(
                 'blog:post_detail',
@@ -150,15 +153,15 @@ class PostMixin(LoginRequiredMixin):
 class PostUpdateView(PostMixin, UpdateView):
 
     def get_success_url(self):
-        return reverse('blog:post_detail',
-                       args=[self.kwargs['post_id']])
+        return reverse_lazy('blog:post_detail',
+                            args=[self.kwargs['post_id']])
 
 
 class PostDeleteView(PostMixin, DeleteView):
 
     def get_success_url(self):
-        return reverse('blog:profile',
-                       args=[self.request.user])
+        return reverse_lazy('blog:profile',
+                            args=[self.request.user])
 
 
 @login_required
@@ -171,6 +174,22 @@ def add_comment(request, post_id):
         comment.post = post
         comment.save()
     return redirect('blog:post_detail', post_id=post_id)
+
+
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    model = Comment
+    form_class = CommentForm
+    template_name = 'blog/comment.html'
+    pk_url_kwarg = 'post_id'
+
+    def form_valid(self, form: PostForm):
+        form.instance.author = self.request.user
+        form.instance.post = get_object_or_404(Post,
+                                               pk=self.kwargs[self.pk_url_kwarg])
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('blog:post_detail', args=[self.kwargs['post_id']])
 
 
 class CommentMixin(LoginRequiredMixin):
@@ -186,8 +205,8 @@ class CommentMixin(LoginRequiredMixin):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('blog:post_detail',
-                       args=[self.kwargs['post_id']])
+        return reverse_lazy('blog:post_detail',
+                            args=[self.kwargs['post_id']])
 
 
 class CommentUpdateView(CommentMixin, UpdateView):
