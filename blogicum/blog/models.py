@@ -6,11 +6,12 @@ from core.models import PublishedModel
 
 
 User = get_user_model()
+TEXT_MAX_LENGTH = 256
 
 
 class Category(PublishedModel):
     title = models.CharField(
-        max_length=256,
+        max_length=TEXT_MAX_LENGTH,
         verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание')
     slug = models.SlugField(
@@ -24,19 +25,21 @@ class Category(PublishedModel):
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
+        ordering = ('created_at',)
 
     def __str__(self):
         return self.title
 
 
 class Location(PublishedModel):
-    name = models.CharField(max_length=256,
+    name = models.CharField(max_length=TEXT_MAX_LENGTH,
                             unique=True,
                             verbose_name='Название места')
 
     class Meta:
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
+        ordering = ('created_at',)
 
     def __str__(self):
         return self.name
@@ -53,7 +56,7 @@ class FilterManager(models.Manager):
 
 class Post(PublishedModel):
     title = models.CharField(
-        max_length=256,
+        max_length=TEXT_MAX_LENGTH,
         verbose_name='Заголовок')
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
@@ -87,7 +90,7 @@ class Post(PublishedModel):
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
-        ordering = ('-pub_date',)
+        ordering = ['-pub_date',]
 
     def __str__(self):
         return self.title
@@ -101,9 +104,11 @@ class Comment(PublishedModel):
         related_name='comments',
         verbose_name='публикация'
     )
-    author = models.ForeignKey(User,
-                               on_delete=models.CASCADE,
-                               verbose_name='Автор комментария')
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор комментария'
+    )
 
     class Meta:
         verbose_name = 'комментарий'

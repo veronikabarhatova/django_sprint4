@@ -1,14 +1,14 @@
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
-
+from django.db.models import Count
 from .models import Post
 
 
-def get_post(kwargs):
+def get_post(post_id):
     return get_object_or_404(
-        Post,
-        pk=kwargs['post_id'],
-        is_published=True,
-        category__is_published=True,
-        pub_date__lte=timezone.now()
+        Post.published_objects.all(),
+        pk=post_id
     )
+
+
+def count_comments(model, field):
+    return model.annotate(count=Count(field))
