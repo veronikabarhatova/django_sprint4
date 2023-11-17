@@ -51,7 +51,7 @@ class FilterManager(models.Manager):
             is_published=True,
             category__is_published=True,
             pub_date__lte=timezone.now(),
-        )
+        ).order_by('-pub_date')
 
 
 class Post(PublishedModel):
@@ -84,6 +84,7 @@ class Post(PublishedModel):
         related_name='posts'
     )
     image = models.ImageField('Фото', upload_to='posts_images', blank=True)
+
     published_objects = FilterManager()
     objects = models.Manager()
 

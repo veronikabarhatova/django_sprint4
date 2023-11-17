@@ -3,10 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.views.generic import (ListView,
                                   DetailView,
                                   UpdateView,
@@ -26,19 +24,12 @@ class IndexListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     paginate_by = POST_TO_SHOW
-    ordering = '-pub_date'
-    model = count_comments(Post.published_objects, 'comments')
 
     def get_queryset(self):
-        return (Post.objects.select_related(
-                'author',
-                'location',
-                'category').
-                filter(is_published=True,
-                category__is_published=True,
-                pub_date__lte=timezone.now()).
-                annotate(comment_count=Count('comments')).
-                order_by('-pub_date'))
+        return count_comments(Post.published_objects.select_related(
+            'author',
+            'location',
+            'category'))
 
 
 def category_posts(request, category_slug):
@@ -46,10 +37,8 @@ def category_posts(request, category_slug):
         Category.objects.filter(
             slug=category_slug,
             is_published=True))
-    post_list = (Post.published_objects.all().
-                 filter(category=category).
-                 annotate(comment_count=Count('comments')).
-                 order_by('-pub_date'))
+    post_list = count_comments(Post.published_objects.
+                               filter(category=category))
     paginator = Paginator(post_list, POST_TO_SHOW)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -71,7 +60,7 @@ class PostDetailView(LoginRequiredMixin, DetailView):
         )
 
     def get_object(self, queryset=None):
-        if self.request.user and self.request.user.is_authenticated:
+        if self.request.user.is_authenticated:
             return get_object_or_404(
                 Post.objects.filter(
                     Q(is_published=True)
@@ -89,11 +78,10 @@ class ProfileListView(ListView):
     paginate_by = POST_TO_SHOW
 
     def get_queryset(self):
-        return (self.model.objects.
-                select_related('author').
-                filter(author__username=self.kwargs['username']).
-                annotate(comment_count=Count('comments')).
-                order_by('-pub_date'))
+        return count_comments(self.model.objects.
+                              select_related('author').
+                              filter(author__username=self.kwargs['username']).
+                              order_by('-pub_date'))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
