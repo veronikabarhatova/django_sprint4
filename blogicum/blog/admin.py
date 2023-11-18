@@ -66,7 +66,4 @@ class CommentAdmin(admin.ModelAdmin):
     )
 
 
-admin.site.register(Comment)
-
-
 admin.site.empty_value_display = 'Не задано'
