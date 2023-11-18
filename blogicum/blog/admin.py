@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import Category, Location, Post, Comment
 
 
+@admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = (
         'title',
@@ -19,9 +20,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display_links = ('title',)
 
 
-admin.site.register(Category, CategoryAdmin)
-
-
+@admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
     list_display = (
         'name',
@@ -36,9 +35,7 @@ class LocationAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
 
 
-admin.site.register(Location)
-
-
+@admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = (
         'title',
@@ -59,9 +56,7 @@ class PostAdmin(admin.ModelAdmin):
     list_display_links = ('title',)
 
 
-admin.site.register(Post)
-
-
+@admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = (
         'text',

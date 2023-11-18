@@ -26,19 +26,24 @@ class IndexListView(ListView):
     paginate_by = POST_TO_SHOW
 
     def get_queryset(self):
-        return count_comments(Post.published_objects.select_related(
-            'author',
-            'location',
-            'category'))
+        return count_comments(
+            Post.published_objects.select_related(
+                'author',
+                'location',
+                'category')
+        )
 
 
 def category_posts(request, category_slug):
     category = get_object_or_404(
         Category.objects.filter(
             slug=category_slug,
-            is_published=True))
-    post_list = count_comments(Post.published_objects.
-                               filter(category=category))
+            is_published=True)
+    )
+    post_list = count_comments(
+        Post.published_objects.filter(
+            category=category)
+    )
     paginator = Paginator(post_list, POST_TO_SHOW)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -56,7 +61,8 @@ class PostDetailView(LoginRequiredMixin, DetailView):
         return dict(
             **super().get_context_data(**kwargs),
             form=CommentForm(),
-            comments=self.object.comments.select_related('author')
+            comments=self.object.comments.
+            select_related('author')
         )
 
     def get_object(self, queryset=None):
@@ -67,9 +73,10 @@ class PostDetailView(LoginRequiredMixin, DetailView):
                     | Q(author=self.request.user)
                 ),
                 pk=self.kwargs[self.pk_url_kwarg])
-        else:
-            return get_object_or_404(Post.published_objects,
-                                     pk=self.kwargs[self.pk_url_kwarg])
+        return get_object_or_404(
+            Post.published_objects,
+            pk=self.kwargs[self.pk_url_kwarg]
+        )
 
 
 class ProfileListView(ListView):
@@ -78,10 +85,12 @@ class ProfileListView(ListView):
     paginate_by = POST_TO_SHOW
 
     def get_queryset(self):
-        return count_comments(self.model.objects.
-                              select_related('author').
-                              filter(author__username=self.kwargs['username']).
-                              order_by('-pub_date'))
+        return count_comments(
+            self.model.objects.
+            select_related('author').
+            filter(author__username=self.kwargs['username']).
+            order_by('-pub_date')
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -126,11 +135,15 @@ class PostMixin(LoginRequiredMixin):
     pk_url_kwarg = 'post_id'
 
     def get_object(self, queryset=None):
-        return get_object_or_404(Post.objects.all(),
-                                 pk=self.kwargs[self.pk_url_kwarg])
+        return get_object_or_404(
+            Post.objects.all(),
+            pk=self.kwargs[self.pk_url_kwarg]
+        )
 
     def dispatch(self, request, *args, **kwargs):
-        post = get_object_or_404(Post, pk=self.kwargs[self.pk_url_kwarg])
+        post = get_object_or_404(
+            Post, pk=self.kwargs[self.pk_url_kwarg]
+        )
         if post.author != self.request.user:
             return redirect(
                 'blog:post_detail',
@@ -167,7 +180,8 @@ def add_comment(request, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
-    return redirect('blog:post_detail', post_id=post_id)
+    return redirect('blog:post_detail',
+                    post_id=post_id)
 
 
 class CommentMixin(LoginRequiredMixin):
@@ -176,10 +190,13 @@ class CommentMixin(LoginRequiredMixin):
     pk_url_kwarg = 'comment_id'
 
     def dispatch(self, request, *args, **kwargs):
-        comment = get_object_or_404(Comment,
-                                    pk=kwargs[self.pk_url_kwarg])
+        comment = get_object_or_404(
+            Comment,
+            pk=kwargs[self.pk_url_kwarg]
+        )
         if comment.author != self.request.user:
-            return redirect('blog:post_detail', post_id=self.kwargs['post_id'])
+            return redirect('blog:post_detail',
+                            post_id=self.kwargs['post_id'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
